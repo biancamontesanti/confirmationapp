@@ -27,6 +27,7 @@ const DashboardPage = () => {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  const [guestFilter, setGuestFilter] = useState<'all' | 'yes' | 'no'>('all');
 
   // Fetch events
   const { data: events = [], isLoading: eventsLoading } = useQuery({
@@ -36,8 +37,8 @@ const DashboardPage = () => {
 
   // Fetch guests for selected event
   const { data: guests = [], isLoading: guestsLoading } = useQuery({
-    queryKey: ['guests', selectedEvent?.id],
-    queryFn: () => guestsAPI.getByEventId(selectedEvent!.id).then(res => res.data),
+    queryKey: ['guests', selectedEvent?._id],
+    queryFn: () => guestsAPI.getByEventId(selectedEvent!._id).then(res => res.data),
     enabled: !!selectedEvent,
   });
 
@@ -68,14 +69,18 @@ const DashboardPage = () => {
   };
 
   const exportGuests = () => {
-    if (!selectedEvent || guests.length === 0) return;
+    if (!selectedEvent || filteredGuests.length === 0) return;
+
+    const filterLabel = guestFilter === 'all' ? 'Todos' : 
+                       guestFilter === 'yes' ? 'Confirmados' : 'Recusados';
 
     const csvContent = [
       ['Nome', 'Resposta', 'Acompanhantes', 'Respondeu em'],
-      ...guests.map(guest => [
+      ...filteredGuests.map(guest => [
         guest.name,
-        guest.response,
-        JSON.parse(guest.plus_ones || '[]').join(', '),
+        guest.response === 'yes' ? 'Confirmou' :
+        guest.response === 'no' ? 'Recusou' : 'Pendente',
+        JSON.parse(guest.plus_ones || '[]').join(', ') || 'Nenhum',
         guest.responded_at ? format(new Date(guest.responded_at), 'PPp', { locale: ptBR }) : 'Não respondeu'
       ])
     ].map(row => row.join(',')).join('\n');
@@ -84,7 +89,7 @@ const DashboardPage = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${selectedEvent.name}-guests.csv`;
+    a.download = `${selectedEvent.name}-${filterLabel.toLowerCase()}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -142,11 +147,25 @@ const DashboardPage = () => {
     }
   };
 
+  // Guest statistics and filtering
   const confirmedGuests = guests.filter(guest => guest.response === 'yes');
+  const declinedGuests = guests.filter(guest => guest.response === 'no');
+  
   const totalConfirmed = confirmedGuests.reduce((total, guest) => {
     const plusOnes = JSON.parse(guest.plus_ones || '[]');
     return total + 1 + plusOnes.length;
   }, 0);
+  
+  const totalDeclined = declinedGuests.length;
+  
+  // Filter guests based on selected filter
+  const filteredGuests = guests.filter(guest => {
+    switch (guestFilter) {
+      case 'yes': return guest.response === 'yes';
+      case 'no': return guest.response === 'no';
+      default: return true;
+    }
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -213,9 +232,9 @@ const DashboardPage = () => {
               ) : (
                 events.map((event) => (
                   <Card
-                    key={event.id}
+                    key={event._id}
                     className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-                      selectedEvent?.id === event.id ? 'ring-2 ring-primary' : ''
+                      selectedEvent?._id === event._id ? 'ring-2 ring-primary' : ''
                     }`}
                     onClick={() => setSelectedEvent(event)}
                   >
@@ -245,10 +264,10 @@ const DashboardPage = () => {
                             variant="ghost"
                             onClick={(e) => {
                               e.stopPropagation();
-                              copyShareableLink(event.id);
+                              copyShareableLink(event._id);
                             }}
                             className="ml-2"
-                            title={`Copy shareable link: ${getShareableLink(event.id)}`}
+                            title={`Copy shareable link: ${getShareableLink(event._id)}`}
                           >
                             <Share2 className="h-4 w-4" />
                           </Button>
@@ -287,7 +306,7 @@ const DashboardPage = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDeleteEvent(selectedEvent.id)}
+                          onClick={() => handleDeleteEvent(selectedEvent._id)}
                           className="w-full sm:w-auto"
                         >
                           Excluir Evento
@@ -349,11 +368,11 @@ const DashboardPage = () => {
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
                         <div className="flex-1 p-3 bg-muted rounded-md border min-w-0">
                           <code className="text-xs sm:text-sm break-all">
-                            {getShareableLink(selectedEvent.id)}
+                            {getShareableLink(selectedEvent._id)}
                           </code>
                         </div>
                         <Button
-                          onClick={() => copyShareableLink(selectedEvent.id)}
+                          onClick={() => copyShareableLink(selectedEvent._id)}
                           size="sm"
                           variant={copiedLink ? "default" : "outline"}
                           className="w-full sm:w-auto"
@@ -377,7 +396,7 @@ const DashboardPage = () => {
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
                           <h4 className="text-sm font-medium">QR Code</h4>
                           <Button
-                            onClick={() => generateQRCode(selectedEvent.id)}
+                            onClick={() => generateQRCode(selectedEvent._id)}
                             size="sm"
                             variant="outline"
                             className="w-full sm:w-auto"
@@ -415,72 +434,115 @@ const DashboardPage = () => {
                       <div>
                         <CardTitle className="flex items-center">
                           <Users className="h-5 w-5 mr-2" />
-                          Guest List
+                          Lista de Convidados
                         </CardTitle>
-                        <CardDescription>
-                          {guests.length} guests • {totalConfirmed} confirmed attendees
+                        <CardDescription className="space-y-1">
+                          <div className="flex flex-wrap gap-4 text-sm">
+                            <span><strong>{guests.length}</strong> total</span>
+                            <span className="text-green-600"><strong>{confirmedGuests.length}</strong> confirmaram ({totalConfirmed} pessoas)</span>
+                            <span className="text-red-600"><strong>{totalDeclined}</strong> recusaram</span>
+                          </div>
                         </CardDescription>
                       </div>
-                      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={exportGuests}
-                          disabled={guests.length === 0}
-                          className="w-full sm:w-auto"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Export CSV
-                        </Button>
-                        <Dialog open={showGuestForm} onOpenChange={setShowGuestForm}>
-                          <DialogTrigger asChild>
-                            <Button size="sm" className="w-full sm:w-auto">
-                              <Plus className="h-4 w-4 mr-2" />
-                              Add Guest
+                      <div className="flex flex-col space-y-3">
+                        {/* Filter Buttons */}
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant={guestFilter === 'all' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setGuestFilter('all')}
+                            className="text-xs"
+                          >
+                            Todos ({guests.length})
+                          </Button>
+                          <Button
+                            variant={guestFilter === 'yes' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setGuestFilter('yes')}
+                            className="text-xs text-green-700 hover:text-green-800"
+                          >
+                            Confirmaram ({confirmedGuests.length})
+                          </Button>
+                          <Button
+                            variant={guestFilter === 'no' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setGuestFilter('no')}
+                            className="text-xs text-red-700 hover:text-red-800"
+                          >
+                            Recusaram ({totalDeclined})
+                          </Button>
+                        </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={exportGuests}
+                            disabled={filteredGuests.length === 0}
+                            className="w-full sm:w-auto"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Exportar {guestFilter === 'all' ? 'Todos' : 
+                                    guestFilter === 'yes' ? 'Confirmados' : 'Recusados'}
+                          </Button>
+                          <Dialog open={showGuestForm} onOpenChange={setShowGuestForm}>
+                            <DialogTrigger asChild>
+                              <Button size="sm" className="w-full sm:w-auto">
+                                <Plus className="h-4 w-4 mr-2" />
+                                Adicionar Convidado
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
-                              <DialogTitle>Add Guest</DialogTitle>
+                              <DialogTitle>Adicionar Convidado</DialogTitle>
                               <DialogDescription>
-                                Add a guest to this event.
+                                Adicione um convidado a este evento.
                               </DialogDescription>
                             </DialogHeader>
                             <GuestForm
-                              eventId={selectedEvent.id}
+                              eventId={selectedEvent._id}
                               onSuccess={() => {
                                 setShowGuestForm(false);
-                                queryClient.invalidateQueries({ queryKey: ['guests', selectedEvent.id] });
+                                queryClient.invalidateQueries({ queryKey: ['guests', selectedEvent._id] });
                               }}
                             />
                           </DialogContent>
                         </Dialog>
+                        </div>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
                     {guestsLoading ? (
-                      <div className="text-center py-4">Loading guests...</div>
+                      <div className="text-center py-4">Carregando convidados...</div>
                     ) : guests.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
-                        No guests yet. Add some guests to get started!
+                        Nenhum convidado ainda. Adicione alguns convidados para começar!
+                      </div>
+                    ) : filteredGuests.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        Nenhum convidado encontrado para o filtro "{
+                          guestFilter === 'yes' ? 'Confirmaram' :
+                          guestFilter === 'no' ? 'Recusaram' : 'Todos'
+                        }".
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="min-w-[120px]">Name</TableHead>
-                              <TableHead className="min-w-[100px]">Response</TableHead>
-                              <TableHead className="min-w-[150px]">Plus Ones</TableHead>
-                              <TableHead className="min-w-[120px]">Responded</TableHead>
+                              <TableHead className="min-w-[120px]">Nome</TableHead>
+                              <TableHead className="min-w-[100px]">Resposta</TableHead>
+                              <TableHead className="min-w-[150px]">Acompanhantes</TableHead>
+                              <TableHead className="min-w-[120px]">Respondeu</TableHead>
                             </TableRow>
                           </TableHeader>
                         <TableBody>
-                          {guests.map((guest) => {
+                          {filteredGuests.map((guest) => {
                             const plusOnes = JSON.parse(guest.plus_ones || '[]');
                             return (
-                              <TableRow key={guest.id}>
+                              <TableRow key={guest._id}>
                                 <TableCell className="font-medium">{guest.name}</TableCell>
                                 <TableCell>
                                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -490,8 +552,8 @@ const DashboardPage = () => {
                                       ? 'bg-red-100 text-red-800'
                                       : 'bg-gray-100 text-gray-800'
                                   }`}>
-                                    {guest.response === 'yes' ? '✅ Yes' : 
-                                     guest.response === 'no' ? '❌ No' : '⏳ Pending'}
+                                    {guest.response === 'yes' ? '✅ Confirmou' : 
+                                     guest.response === 'no' ? '❌ Recusou' : '⏳ Pendente'}
                                   </span>
                                 </TableCell>
                                 <TableCell>
@@ -502,7 +564,7 @@ const DashboardPage = () => {
                                       ))}
                                     </div>
                                   ) : (
-                                    <span className="text-muted-foreground">None</span>
+                                    <span className="text-muted-foreground">Nenhum</span>
                                   )}
                                 </TableCell>
                                 <TableCell>
@@ -554,10 +616,10 @@ const DashboardPage = () => {
                 await queryClient.invalidateQueries({ queryKey: ['events'] });
                 
                 // Update selected event if it's the one being edited
-                if (selectedEvent && editingEvent && selectedEvent.id === editingEvent.id) {
+                if (selectedEvent && editingEvent && selectedEvent._id === editingEvent._id) {
                   // Find the updated event from the fresh data
                   const updatedEvents = await queryClient.getQueryData(['events']) as Event[];
-                  const updatedEvent = updatedEvents?.find(e => e.id === editingEvent.id);
+                  const updatedEvent = updatedEvents?.find(e => e._id === editingEvent._id);
                   if (updatedEvent) {
                     setSelectedEvent(updatedEvent);
                   }

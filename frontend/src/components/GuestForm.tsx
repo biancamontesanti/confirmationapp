@@ -15,7 +15,7 @@ const guestSchema = z.object({
 type GuestFormData = z.infer<typeof guestSchema>;
 
 interface GuestFormProps {
-  eventId: number;
+  eventId: string;
   onSuccess: () => void;
 }
 

@@ -15,7 +15,7 @@ A full-stack RSVP application with Brazilian Portuguese interface, built with Re
 ## 🚀 Live Demo
 
 - **Frontend**: [Deployed on Netlify](https://your-app.netlify.app)
-- **Backend API**: [Deployed on Railway](https://your-backend.railway.app)
+- **Backend API**: [Ready for deployment](https://your-backend-platform.com)
 
 ## 🛠️ Tech Stack
 
@@ -31,7 +31,7 @@ A full-stack RSVP application with Brazilian Portuguese interface, built with Re
 **Backend:**
 - Node.js + Express
 - TypeScript
-- SQLite database
+- MongoDB database with Mongoose ODM
 - JWT authentication
 - bcrypt for password hashing
 - Express rate limiting and security
@@ -42,7 +42,7 @@ A full-stack RSVP application with Brazilian Portuguese interface, built with Re
 confirmationapp/
 ├── frontend/          # React + Vite frontend
 ├── backend/           # Node.js + Express backend
-├── railway.toml       # Railway deployment config
+├── MONGODB_SETUP.md   # MongoDB setup guide
 ├── netlify.toml       # Netlify deployment config
 └── README.md
 ```

@@ -93,7 +93,6 @@ const GuestPage = () => {
   };
 
   const handleEditName = () => {
-    setShowNameForm(true);
     setHasAccepted(false);
     setShowPlusOnes(false);
   };
@@ -207,12 +206,12 @@ const GuestPage = () => {
           <CardContent className="space-y-6">
             {!response ? (
               <>
-                {/* Name Input (only shown when needed) */}
-                {showNameForm && (
+                {/* Name Input (always shown initially) */}
+                {!hasAccepted && (
                   <div className="space-y-4">
                     <div className="text-center">
                       <p className="text-sm text-muted-foreground mb-4">
-                        Por favor, digite seu nome para confirmar presença
+                        Por favor, digite seu nome para responder
                       </p>
                     </div>
                     <div className="space-y-2">
@@ -229,24 +228,33 @@ const GuestPage = () => {
 
                 {/* Accept/Decline Buttons or Confirm/Edit Name */}
                 {!hasAccepted ? (
-                  <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-                    <Button
-                      onClick={() => handleRSVP('yes')}
-                      disabled={isSubmitting}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white h-12 sm:h-16 text-base sm:text-lg"
-                    >
-                      <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
-                      Aceitar
-                    </Button>
-                    <Button
-                      onClick={() => handleRSVP('no')}
-                      disabled={isSubmitting}
-                      variant="destructive"
-                      className="flex-1 h-12 sm:h-16 text-base sm:text-lg"
-                    >
-                      <XCircle className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
-                      Recusar
-                    </Button>
+                  <div className="space-y-4">
+                    {!guestName.trim() && (
+                      <div className="text-center">
+                        <p className="text-sm text-amber-600 font-medium">
+                          ↑ Digite seu nome acima para continuar
+                        </p>
+                      </div>
+                    )}
+                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                      <Button
+                        onClick={() => handleRSVP('yes')}
+                        disabled={isSubmitting || !guestName.trim()}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white h-12 sm:h-16 text-base sm:text-lg disabled:opacity-50"
+                      >
+                        <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
+                        Aceitar
+                      </Button>
+                      <Button
+                        onClick={() => handleRSVP('no')}
+                        disabled={isSubmitting || !guestName.trim()}
+                        variant="destructive"
+                        className="flex-1 h-12 sm:h-16 text-base sm:text-lg disabled:opacity-50"
+                      >
+                        <XCircle className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
+                        Recusar
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -360,17 +368,16 @@ const GuestPage = () => {
                   </div>
                 )}
                 
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setResponse(null);
-                    setGuestName('');
-                    setPlusOnes(['']);
-                    setShowNameForm(false);
-                    setShowPlusOnes(false);
-                    setHasAccepted(false);
-                  }}
-                >
+                       <Button
+                         variant="outline"
+                         onClick={() => {
+                           setResponse(null);
+                           setGuestName('');
+                           setPlusOnes(['']);
+                           setShowPlusOnes(false);
+                           setHasAccepted(false);
+                         }}
+                       >
                   Alterar Resposta
                 </Button>
               </div>

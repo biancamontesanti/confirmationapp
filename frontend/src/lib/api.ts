@@ -38,7 +38,7 @@ export interface User {
 }
 
 export interface Event {
-  id: number;
+  _id: string;
   name: string;
   host_name: string;
   date_time: string;
@@ -51,8 +51,8 @@ export interface Event {
 }
 
 export interface Guest {
-  id: number;
-  event_id: number;
+  _id: string;
+  event_id: string;
   name: string;
   email: string;
   response: 'yes' | 'no' | 'pending';
@@ -72,26 +72,26 @@ export const authAPI = {
 // Events API
 export const eventsAPI = {
   getAll: () => api.get<Event[]>('/events'),
-  getById: (id: number) => api.get<Event>(`/events/${id}`),
-  create: (event: Omit<Event, 'id' | 'created_at' | 'updated_at'>) =>
+  getById: (id: string) => api.get<Event>(`/events/${id}`),
+  create: (event: Omit<Event, '_id' | 'created_at' | 'updated_at'>) =>
     api.post('/events', event),
-  update: (id: number, event: Partial<Event>) =>
+  update: (id: string, event: Partial<Event>) =>
     api.put(`/events/${id}`, event),
-  delete: (id: number) => api.delete(`/events/${id}`),
+  delete: (id: string) => api.delete(`/events/${id}`),
 };
 
 // Guests API
 export const guestsAPI = {
-  getByEventId: (eventId: number) =>
+  getByEventId: (eventId: string) =>
     api.get<Guest[]>(`/guests/event/${eventId}`),
-  addToEvent: (eventId: number, name: string, email: string) =>
+  addToEvent: (eventId: string, name: string, email: string) =>
     api.post(`/guests/event/${eventId}`, { name, email }),
-  getPublicEvent: (eventId: number) =>
+  getPublicEvent: (eventId: string) =>
     api.get<Event>(`/guests/public/event/${eventId}`),
-  rsvp: (eventId: number, email: string, response: 'yes' | 'no', plus_ones: string[] = []) =>
-    api.post(`/guests/rsvp/${eventId}`, { email, response, plus_ones }),
-  getGuestByEmail: (eventId: number, email: string) =>
-    api.get<Guest>(`/guests/public/event/${eventId}/guest/${email}`),
+  rsvp: (eventId: string, name: string, response: 'yes' | 'no', plus_ones: string[] = []) =>
+    api.post(`/guests/rsvp/${eventId}`, { name, response, plus_ones }),
+  getRsvpStatus: (eventId: string, name: string) =>
+    api.get<Guest>(`/guests/rsvp/${eventId}/${name}`),
 };
 
 export default api;

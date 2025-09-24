@@ -142,8 +142,8 @@ const EventForm: React.FC<EventFormProps> = ({ onSuccess, event }) => {
         image_url: imageUrl
       };
 
-      if (event) {
-        await eventsAPI.update(event.id, eventData);
+          if (event) {
+            await eventsAPI.update(event._id, eventData);
       } else {
         await eventsAPI.create(eventData);
         toast({

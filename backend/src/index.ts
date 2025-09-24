@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import { initDatabase } from './database';
+import { connectDB } from './database';
 import authRoutes from './routes/auth';
 import eventRoutes from './routes/events';
 import guestRoutes from './routes/guests';
@@ -55,7 +55,7 @@ app.use('*', (req, res) => {
 // Initialize database and start server
 const startServer = async () => {
   try {
-    await initDatabase();
+    await connectDB();
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Health check: http://localhost:${PORT}/api/health`);

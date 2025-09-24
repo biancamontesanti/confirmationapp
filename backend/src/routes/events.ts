@@ -1,17 +1,17 @@
 import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { dbRun, dbGet, dbAll } from '../database';
 import { AuthRequest, authenticateToken } from '../auth';
+import Event from '../models/Event';
+import mongoose from 'mongoose';
 
 const router = express.Router();
 
 // Get all events for a host
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const events = await dbAll(
-      'SELECT * FROM events WHERE host_id = ? ORDER BY created_at DESC',
-      [req.user!.id]
-    );
+    const events = await Event.find({ host_id: req.user!.id })
+      .sort({ created_at: -1 })
+      .lean();
     res.json(events);
   } catch (error) {
     console.error('Get events error:', error);
@@ -22,10 +22,14 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 // Get single event
 router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const event = await dbGet(
-      'SELECT * FROM events WHERE id = ? AND host_id = ?',
-      [req.params.id, req.user!.id]
-    );
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid event ID' });
+    }
+
+    const event = await Event.findOne({
+      _id: req.params.id,
+      host_id: req.user!.id
+    }).lean();
     
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
@@ -53,15 +57,23 @@ router.post('/', authenticateToken, [
     }
 
     const { name, host_name, date_time, location, dress_code, event_type, image_url } = req.body;
+    
+    const newEvent = new Event({
+      host_id: req.user!.id,
+      name,
+      host_name,
+      date_time,
+      location,
+      dress_code: dress_code || '',
+      event_type,
+      image_url: image_url || null
+    });
 
-    const result = await dbRun(
-      'INSERT INTO events (host_id, name, host_name, date_time, location, dress_code, event_type, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [req.user!.id, name, host_name, date_time, location, dress_code || '', event_type, image_url || null]
-    ) as any;
+    const savedEvent = await newEvent.save();
 
     res.status(201).json({
       message: 'Event created successfully',
-      event: { id: result.lastID, name, host_name, date_time, location, dress_code, event_type, image_url }
+      event: savedEvent
     });
   } catch (error) {
     console.error('Create event error:', error);
@@ -83,18 +95,34 @@ router.put('/:id', authenticateToken, [
       return res.status(400).json({ errors: errors.array() });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid event ID' });
+    }
+
     const { name, host_name, date_time, location, dress_code, event_type, image_url } = req.body;
 
-    const result = await dbRun(
-      'UPDATE events SET name = ?, host_name = ?, date_time = ?, location = ?, dress_code = ?, event_type = ?, image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND host_id = ?',
-      [name, host_name, date_time, location, dress_code || '', event_type, image_url || null, req.params.id, req.user!.id]
-    ) as any;
+    const updatedEvent = await Event.findOneAndUpdate(
+      { _id: req.params.id, host_id: req.user!.id },
+      {
+        name,
+        host_name,
+        date_time,
+        location,
+        dress_code: dress_code || '',
+        event_type,
+        image_url: image_url || null
+      },
+      { new: true, runValidators: true }
+    );
 
-    if (result.changes === 0) {
+    if (!updatedEvent) {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    res.json({ message: 'Event updated successfully' });
+    res.json({
+      message: 'Event updated successfully',
+      event: updatedEvent
+    });
   } catch (error) {
     console.error('Update event error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -102,14 +130,18 @@ router.put('/:id', authenticateToken, [
 });
 
 // Delete event
-router.delete('/:id', authenticateToken, async (req: AuthRequest, res) => {
+router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const result = await dbRun(
-      'DELETE FROM events WHERE id = ? AND host_id = ?',
-      [req.params.id, req.user!.id]
-    ) as any;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid event ID' });
+    }
 
-    if (result.changes === 0) {
+    const deletedEvent = await Event.findOneAndDelete({
+      _id: req.params.id,
+      host_id: req.user!.id
+    });
+
+    if (!deletedEvent) {
       return res.status(404).json({ error: 'Event not found' });
     }
 

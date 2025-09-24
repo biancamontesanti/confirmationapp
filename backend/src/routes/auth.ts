@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { dbRun, dbGet } from '../database';
 import { hashPassword, comparePassword, generateToken } from '../auth';
+import Host from '../models/Host';
 
 const router = express.Router();
 
@@ -20,24 +20,25 @@ router.post('/register', [
     const { email, password, name } = req.body;
 
     // Check if user already exists
-    const existingUser = await dbGet('SELECT id FROM hosts WHERE email = ?', [email]);
+    const existingUser = await Host.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: 'User already exists' });
     }
 
     // Hash password and create user
     const hashedPassword = await hashPassword(password);
-    const result = await dbRun(
-      'INSERT INTO hosts (email, password, name) VALUES (?, ?, ?)',
-      [email, hashedPassword, name]
-    ) as any;
+    const newHost = new Host({
+      email,
+      password: hashedPassword
+    });
 
-    const token = generateToken(result.lastID, email, name);
+    const savedHost = await newHost.save();
+    const token = generateToken((savedHost._id as any).toString(), savedHost.email, name);
 
     res.status(201).json({
       message: 'User created successfully',
       token,
-      user: { id: result.lastID, email, name }
+      user: { id: savedHost._id, email: savedHost.email, name }
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -59,7 +60,7 @@ router.post('/login', [
     const { email, password } = req.body;
 
     // Find user
-    const user = await dbGet('SELECT * FROM hosts WHERE email = ?', [email]) as any;
+    const user = await Host.findOne({ email });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -70,12 +71,12 @@ router.post('/login', [
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = generateToken(user.id, user.email, user.name);
+    const token = generateToken((user._id as any).toString(), user.email, email);
 
     res.json({
       message: 'Login successful',
       token,
-      user: { id: user.id, email: user.email, name: user.name }
+      user: { id: user._id, email: user.email, name: email }
     });
   } catch (error) {
     console.error('Login error:', error);
