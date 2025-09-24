@@ -1,0 +1,22 @@
+{
+  "name": "confirmation-app",
+  "version": "1.0.0",
+  "description": "Full-stack RSVP application",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "./start-dev.sh",
+    "dev:simple": "concurrently \"yarn --cwd backend dev\" \"yarn --cwd frontend dev\"",
+    "build": "yarn --cwd frontend build && yarn --cwd backend build",
+    "start": "yarn --cwd backend start",
+    "install:all": "yarn install && yarn --cwd backend install && yarn --cwd frontend install",
+    "clean": "rm -rf node_modules yarn.lock backend/node_modules backend/yarn.lock frontend/node_modules frontend/yarn.lock"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}
