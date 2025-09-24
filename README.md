@@ -84,14 +84,29 @@ The app will be available at:
 
 ## 🚀 Deployment
 
-### Backend (Railway)
+### Backend (Multiple Options)
 
+**Option 1: Render**
 1. Push to GitHub
-2. Connect Railway to your GitHub repo
-3. Set environment variables in Railway dashboard:
+2. Connect Render to your GitHub repo
+3. Set build command: `cd backend && npm install && npm run build`
+4. Set start command: `cd backend && npm start`
+5. Set environment variables:
    - `NODE_ENV=production`
    - `JWT_SECRET=your-secure-jwt-secret`
+   - `MONGODB_URI=your-mongodb-connection-string`
    - `PORT=3001`
+
+**Option 2: Vercel**
+1. Install Vercel CLI: `npm i -g vercel`
+2. Deploy: `vercel --prod`
+3. Set environment variables in Vercel dashboard
+
+**Option 3: Heroku**
+1. Install Heroku CLI
+2. Create app: `heroku create your-app-name`
+3. Set environment variables: `heroku config:set MONGODB_URI=your-connection-string`
+4. Deploy: `git push heroku main`
 
 ### Frontend (Netlify)
 
@@ -102,7 +117,18 @@ The app will be available at:
    - Build command: `npm run build`
    - Publish directory: `frontend/dist`
 4. Add environment variable:
-   - `VITE_API_URL=https://your-railway-backend.railway.app`
+   - `VITE_API_URL=https://your-backend-url.com`
+
+### Database (MongoDB)
+
+**Option 1: MongoDB Atlas (Recommended)**
+1. Create account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+2. Create a free cluster
+3. Get connection string
+4. Add to your backend environment variables
+
+**Option 2: Local MongoDB**
+- Follow the setup guide in `MONGODB_SETUP.md`
 
 ## 📱 Usage
 

@@ -6,7 +6,7 @@ Your RSVP app has been successfully migrated from SQLite to MongoDB! Here's ever
 
 ## 📋 **What Changed**
 
-✅ **Removed Railway traces**: `railway.toml` deleted  
+✅ **Deployment ready**: Compatible with any hosting platform  
 ✅ **Database**: SQLite → MongoDB with Mongoose ODM  
 ✅ **Dependencies**: `sqlite3` → `mongoose`  
 ✅ **Models**: Created proper MongoDB schemas for Hosts, Events, and Guests  
@@ -112,7 +112,7 @@ FRONTEND_URL=https://your-frontend-domain.com
 ```
 
 ### **Recommended Platforms**
-- **Backend**: Railway, Render, Heroku, or Vercel
+- **Backend**: Render, Heroku, or Vercel
 - **Database**: MongoDB Atlas (free tier available)
 - **Frontend**: Netlify, Vercel, or GitHub Pages
 
